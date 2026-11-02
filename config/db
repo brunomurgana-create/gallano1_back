@@ -1,0 +1,126 @@
+BASE DE DATOS: GALANO
+
+-- 1. TABLA CATEGORIAS
+CREATE TABLE categorias (
+    id_categoria SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion TEXT,
+    activo BOOLEAN DEFAULT TRUE,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2. TABLA CLIENTES
+CREATE TABLE clientes (
+    id_cliente SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    apellido VARCHAR(100) NOT NULL,
+    email VARCHAR(150) UNIQUE,
+    telefono VARCHAR(30),
+    direccion TEXT,
+    ciudad VARCHAR(100),
+    codigo_postal VARCHAR(20),
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3. TABLA PRODUCTOS
+CREATE TABLE productos (
+    id_producto SERIAL PRIMARY KEY,
+    nombre VARCHAR(150) NOT NULL,
+    descripcion TEXT,
+    precio NUMERIC(12,2) NOT NULL CHECK (precio >= 0),
+    stock INTEGER DEFAULT 0 CHECK (stock >= 0),
+    material VARCHAR(100),
+    color VARCHAR(100),
+    dimensiones VARCHAR(100),
+    imagen_url TEXT,
+    id_categoria INTEGER NOT NULL,
+    activo BOOLEAN DEFAULT TRUE,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_producto_categoria
+    FOREIGN KEY (id_categoria)
+    REFERENCES categorias(id_categoria)
+);
+
+-- 4. TABLA PEDIDOS
+CREATE TABLE pedidos (
+    id_pedido SERIAL PRIMARY KEY,
+    id_cliente INTEGER NOT NULL,
+    fecha_pedido TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    estado VARCHAR(30) DEFAULT 'pendiente',
+    direccion_entrega TEXT,
+    observaciones TEXT,
+    total NUMERIC(12,2) DEFAULT 0,
+
+    CONSTRAINT fk_pedidos_cliente
+    FOREIGN KEY (id_cliente)
+    REFERENCES clientes(id_cliente),
+
+    CONSTRAINT pedidos_estado_check
+    CHECK (estado IN (
+        'pendiente',
+        'confirmado',
+        'pagado',
+        'enviado',
+        'entregado',
+        'cancelado'
+    )),
+
+    CONSTRAINT pedidos_total_check
+    CHECK (total >= 0)
+);
+
+-- 5. TABLA DETALLE_PEDIDO
+CREATE TABLE detalle_pedido (
+    id_detalle SERIAL PRIMARY KEY,
+    id_pedido INTEGER NOT NULL,
+    id_producto INTEGER NOT NULL,
+    cantidad INTEGER NOT NULL CHECK (cantidad > 0),
+    precio_unitario NUMERIC(12,2) NOT NULL,
+    subtotal NUMERIC(12,2)
+    GENERATED ALWAYS AS (cantidad * precio_unitario) STORED,
+
+    CONSTRAINT fk_detalle_pedido
+    FOREIGN KEY (id_pedido)
+    REFERENCES pedidos(id_pedido),
+
+    CONSTRAINT fk_detalle_producto
+    FOREIGN KEY (id_producto)
+    REFERENCES productos(id_producto)
+);
+
+-- 6. TABLA PAGOS
+CREATE TABLE pagos (
+    id_pago SERIAL PRIMARY KEY,
+    id_pedido INTEGER NOT NULL,
+    fecha_pago TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    importe NUMERIC(12,2) NOT NULL,
+    metodo_pago VARCHAR(30) NOT NULL,
+    estado VARCHAR(30) DEFAULT 'pendiente',
+    referencia VARCHAR(150),
+
+    CONSTRAINT fk_pago_pedido
+    FOREIGN KEY (id_pedido)
+    REFERENCES pedidos(id_pedido),
+
+    CONSTRAINT pagos_estado_check
+    CHECK (estado IN (
+        'pendiente',
+        'aprobado',
+        'rechazado',
+        'reembolsado'
+    )),
+
+    CONSTRAINT pagos_importe_check
+    CHECK (importe > 0),
+
+    CONSTRAINT pagos_metodo_pago_check
+    CHECK (metodo_pago IN (
+        'efectivo',
+        'transferencia',
+        'tarjeta',
+        'mercadopago',
+        'otro'
+    ))
+);
